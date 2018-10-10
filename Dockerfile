@@ -1,10 +1,3 @@
-#
-# youtube-dl Server Dockerfile
-#
-# https://github.com/kmb32123/youtube-dl-server-dockerfile
-#
-
-# Pull base image.
 FROM python:3-onbuild
 
 # Install ffmpeg.
