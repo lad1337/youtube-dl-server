@@ -1,13 +1,24 @@
-FROM python:3-onbuild
+FROM python:alpine as builder
 
-# Install ffmpeg.
-RUN \
-  apt-get update && \
-  apt-get install -y libav-tools && \
-  rm -rf /var/lib/apt/lists/*
-  
+RUN apk --update add --no-cache git
+
+ARG whl=/tmp/wheelhouse
+WORKDIR /tmp
+COPY . .
+RUN pip wheel --wheel-dir=${whl} .
+
+FROM python:alpine
+RUN apk --update add ffmpeg
+
+# write your package name here with _
+ARG PACKAGENAME=youtube_dl_server
+ARG whl=/tmp/wheelhouse
+COPY --from=builder ${whl} ${whl}
+RUN pip install --find-links ${whl} ${whl}/${PACKAGENAME}-*.whl
+RUN rm -r ${whl}
+
 EXPOSE 8080
 
 VOLUME ["/youtube-dl"]
 
-CMD [ "python", "-u", "./youtube-dl-server.py" ]
+CMD ["youtube-dl-server"]
