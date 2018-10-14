@@ -43,18 +43,22 @@ function poll_state(){
             var item = state[url];
             item.id = id;
             item.url = url;
-            if(item.status == 'downloading'){
+            if(item.status == 'downloading' || item.status == 'finished'){
                 var entry = $('ul.downloading .' + id);
                 $('ul.pending li.' + id).remove();
                 if(entry.length == 0){
                     $('ul.downloading').append(new_entry(id, item));
-                } else {
-                    $('.progress-bar', entry)
-                    .removeClass('progress-bar-striped progress-bar-animated')
-                    .width(item._percent_str);
-                    $('.speed', entry).text(item._speed_str);
                 }
-            } else if(item.status == 'finished') {
+                var animate_classes = 'progress-bar-striped progress-bar-animated';
+                var bar = $('.progress-bar', entry);
+                if (item.status == 'downloading') {
+                    bar.removeClass(animate_classes).width(item._percent_str);
+                } else { // finished aka transcoding / ffmpeg
+                    bar.addClass(animate_classes + ' bg-success')
+                    .width('100%');
+                }
+                $('.speed', entry).text(item._speed_str);
+            } else if(item.status == 'done') {
                 $('ul.downloading li.' + id).remove();
                 $('ul.pending li.' + id).remove();
                 var entry = $('ul.done .' + id);

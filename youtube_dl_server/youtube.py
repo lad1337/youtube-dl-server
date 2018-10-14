@@ -98,7 +98,7 @@ class YTWorker(Process):
             self._url = task.url
             item = task.info
         item['updated_at'] = datetime.now().timestamp()
-        print("Inform {s._url} status {status}".format(s=self, status=item.get('status')))
+        #print("Inform {s._url} status {status}".format(s=self, status=item.get('status')))
         maybe_remove(item, 'formats', 'requested_formats', 'tags')
 
         if self._url in self.state:
@@ -153,5 +153,6 @@ class YTWorker(Process):
         print("Starting download of " + self._url)
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([self._url])
+        self.inform({'status': 'done'})
 
 
