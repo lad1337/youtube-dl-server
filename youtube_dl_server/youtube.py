@@ -6,6 +6,7 @@ from youtube_dl import YoutubeDL as YoutubeDL_
 
 from multiprocessing import Process
 
+DEFAULT_TEMPLATE = "%(title)s.%(ext)s"
 
 class YoutubeDL(YoutubeDL_):
     def download(self, url_list):
@@ -56,11 +57,12 @@ class Task:
 
 class YTWorker(Process):
 
-    def __init__(self, queue, state, download=True, *args, **kwargs):
+    def __init__(self, queue, state, template=DEFAULT_TEMPLATE ,download=True, *args, **kwargs):
         super(YTWorker, self).__init__(*args, **kwargs)
         self.queue = queue
         self.state = state
         self.should_download = download
+        self.out_template = template
         self._url = None
 
     def __str__(self):
@@ -141,7 +143,7 @@ class YTWorker(Process):
             'progress_hooks': [self.inform],
             'dump_single_json': True,
             'call_home': False,
-            'outtmpl': "downloads/%(title)s.%(ext)s",
+            'outtmpl': self.out_template,
             'format': "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio",
             'writethumbnail': True,
             'cachedir': '/tmp',

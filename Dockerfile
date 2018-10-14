@@ -19,6 +19,7 @@ RUN rm -r ${whl}
 
 EXPOSE 8080
 
+ENV YTDL_ROOT="/downloads"
 VOLUME ["/youtube-dl"]
 
 CMD ["youtube-dl-server"]

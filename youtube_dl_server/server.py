@@ -9,6 +9,7 @@ from bottle import static_file
 
 from youtube_dl_server.youtube import Task
 from youtube_dl_server.youtube import YTWorker
+from youtube_dl_server.youtube import DEFAULT_TEMPLATE
 
 ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
@@ -20,10 +21,21 @@ class Server(Bottle):
         self.state = self._manager.dict()
         self.workers = []
         self.queue = JoinableQueue()
+        self._root = os.environ.get('YTDL_ROOT', 'downloads')
+        self._template = os.environ.get('YTDL_TEMPLATE', DEFAULT_TEMPLATE)
+
+    @property
+    def template(self):
+        return os.path.join(self._root, self._template)
 
     def spawn_n_workers(self, n, **kwargs):
         for _ in range(n):
-            worker = YTWorker(queue=self.queue, state=self.state, **kwargs)
+            worker = YTWorker(
+                queue=self.queue,
+                state=self.state,
+                template=self.template,
+                **kwargs
+            )
             worker.start()
             self.workers.append(worker)
 
