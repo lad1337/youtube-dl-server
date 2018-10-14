@@ -3,18 +3,51 @@ ul.pending .progress {
     display: none;
 }
 
+ul.done .speed {
+    display: none;
+}
+
 ul.pending .analysing .progress{
     display: flex;
 }
 
-li.media img {
-    width: 100px;
+ul li img {
+    width: 100%;
+    max-width: 100px;
+    background: var(--secondary);
 }
-li.media h5 {
-    font-size: 0.8em;
-    max-height: 30px;
-    overflow: hidden;
+ul li img[src=""] {
+    min-height: 56px;
 }
-li.analysing img {
+ul div.img {
     display: none;
+}
+
+li h5 {
+    font-size: 0.8em;
+    max-width: 100%;
+}
+
+@media (min-width: 576px){
+    .container {
+       max-width: 100%;
+    }
+}
+@media (min-width: 768px){
+    .container {
+       max-width: 100%;
+    }
+}
+@media (min-width: 992px){
+    ul div.img {
+        display: block;
+    }
+    .container {
+       max-width: 100%;
+    }
+}
+@media (min-width: 1200px){
+    .container {
+       max-width: 90%;
+    }
 }

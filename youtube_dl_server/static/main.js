@@ -15,7 +15,7 @@ String.prototype.hashCode = function() {
 var template;
 var status_class_map = {
     'downloading': 'bg-transparent',
-    'analysing': 'bg-warning',
+    'analysing': 'bg-transparent',
     'finished': 'bg-transparent',
     'pending': ''
 };
@@ -70,7 +70,7 @@ function poll_state(){
                     $('ul.pending').append(new_entry(id, item));
             }
         }
-        sort();
+        //sort();
     });
 
 }
