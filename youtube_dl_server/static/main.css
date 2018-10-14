@@ -1,0 +1,20 @@
+ul.done .progress,
+ul.pending .progress {
+    display: none;
+}
+
+ul.pending .analysing .progress{
+    display: flex;
+}
+
+li.media img {
+    width: 100px;
+}
+li.media h5 {
+    font-size: 0.8em;
+    max-height: 30px;
+    overflow: hidden;
+}
+li.analysing img {
+    display: none;
+}
