@@ -53,10 +53,12 @@ def server_static(filename):
 
 @app.route('/state', method='GET')
 def state():
-    return {
-        "success" : True,
-        "state": dict(app.state),
-    }
+    test = os.environ.get('YTDL_TEST', None)
+    if test is None:
+        return {
+            "success" : True,
+            "state": dict(app.state),
+        }
     # for testing the ui ... for now
     import random
     return {
