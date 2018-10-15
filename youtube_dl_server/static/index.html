@@ -11,7 +11,7 @@
   <title>youtube-dl</title>
 
   <script id="entry-template" type="text/x-handlebars-template">
-    <li class="{{id}} my-4 rounded {{class}} {{status}}" data-at="{{updated_at}}">
+    <li class="{{id}} item my-4 rounded {{class}} {{status}}" data-at="{{updated_at}}">
       <div class="row">
         <div class="col-3 pr-1 img">
           <img class="rounded shadow-sm progress-bar-striped" src="{{thumbnail}}">
@@ -32,12 +32,12 @@
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-dark">
-  <a class="navbar-brand" href="#">Youtube-dl</a>
+  <a class="navbar-brand text-light" href="#">Youtube-dl</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
   <div class="collapse navbar-collapse" id="navbarSupportedContent">
-    <form class="form-inline" action="/q" method="POST">
+    <form class="form-inline">
       <input class="form-control mr-sm-2" name="url" type="url" placeholder="URL" aria-label="URL">
       <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Add</button>
     </form>
@@ -55,7 +55,10 @@
       <ul class="list-unstyled downloading"></ul>
     </div>
     <div class="col-4 bg-light">
-      <h2 class="text-secondary text-center">Done</h2>
+      <h2 class="text-secondary text-center">
+        Done
+        <button id="clear-history" type="button" class="btn btn-outline-danger btn-sm">Clear</button>
+      </h2>
       <ul class="list-unstyled done"></ul>
     </div>
   </div>

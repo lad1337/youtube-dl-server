@@ -1,3 +1,7 @@
+.navbar form input {
+    width: 600px !important;
+}
+
 ul.done .progress,
 ul.pending .progress {
     display: none;

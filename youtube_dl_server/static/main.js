@@ -36,6 +36,7 @@ function sort(){
 function poll_state(){
     $.getJSON('state', function(state){
         var state = state.state;
+        $('li.item').addClass('old');
         for(url in state){
             if (!state.hasOwnProperty(url))
                 continue;
@@ -46,9 +47,10 @@ function poll_state(){
             if(item.status == 'downloading' || item.status == 'finished'){
                 var entry = $('ul.downloading .' + id);
                 $('ul.pending li.' + id).remove();
-                if(entry.length == 0){
+                if(entry.length == 0)
                     $('ul.downloading').append(new_entry(id, item));
-                }
+                else
+                    entry.removeClass('old');
                 var animate_classes = 'progress-bar-striped progress-bar-animated';
                 var bar = $('.progress-bar', entry);
                 if (item.status == 'downloading') {
@@ -64,16 +66,23 @@ function poll_state(){
                 var entry = $('ul.done .' + id);
                 if(entry.length == 0)
                     $('ul.done').append(new_entry(id, item));
-            } else if(item.status == 'done'){
-                $('li.' + id).remove();
+                else
+                    entry.removeClass('old');
             } else {
                 var entry = $('ul.pending .' + id);
                 if(item.status === undefined)
                     item.status = 'pending';
                 if(entry.length == 0)
                     $('ul.pending').append(new_entry(id, item));
+                else{
+                    if(item.status == 'analysing'){
+                        $('.progress-bar', entry).width(item._percent_str);
+                    }
+                    entry.removeClass('old');
+                }
             }
         }
+        $('li.item.old').remove();
         //sort();
     });
 
@@ -83,4 +92,14 @@ $(document).ready(function() {
     window.setInterval(poll_state, 1000);
     var source   = document.getElementById("entry-template").innerHTML;
     template = Handlebars.compile(source);
+    $('.navbar form').submit(function(e){
+        $.post('q', $(this).serialize());
+        e.preventDefault();
+    });
+    $('#clear-history').click(function(){
+        $.ajax({
+            url: 'state/done',
+            type: 'DELETE',
+        });
+    });
 });
