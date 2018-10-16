@@ -9,7 +9,16 @@ from youtube_dl import YoutubeDL as YoutubeDL_
 from multiprocessing import Process
 
 #DEFAULT_TEMPLATE = "%(title)s.%(ext)s"
-DEFAULT_TEMPLATE = "%(uploader)s [%(channel_id)s]/%(playlist)s [%(playlist_id)s]/%(title)s [%(id)s].%(ext)s"
+#DEFAULT_TEMPLATE = "%(uploader)s [%(channel_id)s]/%(playlist)s [%(playlist_id)s]/%(title)s [%(id)s].%(ext)s"
+# https://forums.plex.tv/t/rel-youtube-metadata-agent/44574/133
+"""
+- Playlist [PLxxxxxxx]/file [xxxxxxx].ext
+- Uploader (also called channel) [UCxxxxxxx]/Folder x/file [xxxxxxx].ext
+- Uploader (also called channel) [UCxxxxxxx]|Subject/Playlist [PLxxxxxxx]/file [xxxxxxx].ext
+- eg: /Cody’s Lab [UCu6mSoMNzHQiBIOCkHUa2Aw]/24K Pure Gold Foil Ball [bt2BDCwu18U].mp4
+The uploader/Channel will become a collection, The playlist a series, The files episodes.
+"""
+DEFAULT_TEMPLATE = "%(playlist)s [%(playlist_id)s]/%(title)s [%(id)s].%(ext)s"
 
 
 class YoutubeDL(YoutubeDL_):

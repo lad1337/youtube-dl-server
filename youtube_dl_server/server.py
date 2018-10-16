@@ -66,13 +66,12 @@ def server_static(filename):
 @app.route('/state/done', method='DELETE')
 def delete_state():
     state = dict(app.state)
-    new_ = {}
     for key, status in state.items():
         if status.get('status') != 'done':
-            new_[key] = status
+            pass
         else:
             print("Removing {}".format(key))
-    app.state = new_
+            del app.state[key]
 
 
 @app.route('/state', method='GET')
