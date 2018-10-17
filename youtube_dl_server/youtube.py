@@ -1,4 +1,5 @@
 from datetime import datetime
+from multiprocessing import Process
 import os
 import re
 
@@ -6,7 +7,8 @@ import youtube_dl as ydl
 from youtube_dl.utils import UnavailableVideoError
 from youtube_dl import YoutubeDL as YoutubeDL_
 
-from multiprocessing import Process
+from youtube_dl_server.utils import attribute
+from youtube_dl_server.utils import maybe_remove
 
 #DEFAULT_TEMPLATE = "%(title)s.%(ext)s"
 #DEFAULT_TEMPLATE = "%(uploader)s [%(channel_id)s]/%(playlist)s [%(playlist_id)s]/%(title)s [%(id)s].%(ext)s"
@@ -43,6 +45,7 @@ class YoutubeDL(YoutubeDL_):
                 )
             except UnavailableVideoError:
                 self.report_error('unable to download video')
+                raise
             except ydl.MaxDownloadsReached:
                 self.to_screen('[info] Maximum number of downloaded files reached.')
                 raise
@@ -54,10 +57,14 @@ class YoutubeDL(YoutubeDL_):
 
 
 class Task:
-
-    def __init__(self, url, info=None):
+    def __init__(self, url, info=None, title_filter=None, index_filter=None):
         self.url = url
         self.info = info or {}
+        self.title_filter = title_filter
+        self.index_filter = index_filter
+        if index_filter is not None:
+            self.index_filter = map(int, index_filter.split(','))
+
 
     @property
     def is_playlist(self):
@@ -71,16 +78,29 @@ class Task:
     def from_info(cls, info):
         return cls(info['webpage_url'], info=info)
 
+    def new_for(self, info):
+        if self.title_filter is not None and self.title_filter not in info['title']:
+            return
+        if self.index_filter is not None and info['playlist_index'] not in self.index_filter:
+            return
+        return Task.from_info(info)
+
 
 class YTWorker(Process):
 
-    def __init__(self, queue, state, template=DEFAULT_TEMPLATE ,download=True, *args, **kwargs):
+    def __init__(self, queue, state, template=DEFAULT_TEMPLATE ,download=True, proxy=None, *args, **kwargs):
         super(YTWorker, self).__init__(*args, **kwargs)
         self.queue = queue
         self.state = state
         self.should_download = download
         self.out_template = template
-        self._url = None
+        self.task = None
+        self.proxy = proxy
+        self.proxy.busy = False
+
+    @property
+    def url(self):
+        return self.task.url
 
     def __str__(self):
         s = super(YTWorker, self).__str__()
@@ -90,61 +110,62 @@ class YTWorker(Process):
     def run(self):
         print("Started {}".format(self))
         while True:
-            task = self.queue.get()
+            self.task = self.queue.get()
+            self.proxy.busy = True
             try:
-                if task.investigate:
-                    entries = self.get_info(task)
-                    for info in entries:
-                        t = Task.from_info(info)
-                        self.inform(task=t)
-                        self.queue.put(t)
+                if self.task.investigate:
+                    self.investigate(self.task)
                 elif self.should_download:
-                    self.download(task)
+                    self.download(self.task)
                 else:
-                    self.queue.put(task)
+                    print(f"re queueing ... but why? {self.task}")
+                    self.queue.put(self.task)
+            except:
+                self.inform({'status': 'error'})
+                raise
+            else:
+                self.proxy.busy = False
             finally:
                 self.queue.task_done()
 
-    def inform(self, item=None, task=None):
-        def maybe_remove(d, *keys):
-            for key in keys:
-                try:
-                    del item[key]
-                except KeyError:
-                    pass
+    def investigate(self, task):
+        entries = self.get_info(task)
+        for info in entries:
+            t = task.new_for(info)
+            if t is None:
+                continue
+            with attribute(self, 'task', t):
+                self.inform(t.info)
+            self.queue.put(t)
 
-        if task is not None:
-            self._url = task.url
-            item = task.info
+    def inform(self, item=None):
         item['updated_at'] = datetime.now().timestamp()
         #print("Inform {s._url} status {status}".format(s=self, status=item.get('status')))
         maybe_remove(item, 'formats', 'requested_formats', 'tags')
 
-        if self._url in self.state:
-            state = self.state[self._url]
+        if self.url in self.state:
+            state = self.state[self.url]
             if '_total_bytes_str' in state:
                 maybe_remove(item, '_total_bytes_str')
             # seams like this dict proxi does not like a direct update
             state.update(item)
-            self.state[self._url] = state
+            self.state[self.url] = state
         else:
-            self.state[self._url] = item
+            self.state[self.url] = item
 
     def get_info(self, task):
-        self._url = task.url
-        self.inform({'status': 'analysing', 'title': self._url, 'thumbnail': ''})
+        self.inform({'status': 'analysing', 'title': self.url, 'thumbnail': ''})
         # [download] Downloading video 4 of 16
         pattern = re.compile("video (?P<index>\d+) of (?P<total>\d+)")
 
-
-        def debug(message):
+        def parser(message):
             match = pattern.search(message)
             if match is not None:
                 percent = 100 / (float(match.group('total')) / float(match.group('index')))
                 self.inform({
                     '_percent_str': f"{percent}%",
                 })
-        fake_logger = type('f', tuple(), {'debug': debug})
+        fake_logger = type('f', tuple(), {'debug': parser, 'warning': parser})
 
         ydl_opts = {
             'logger': fake_logger,
@@ -167,7 +188,6 @@ class YTWorker(Process):
 
 
     def download(self, task):
-        self._url = task.url
         ydl_opts = {
             'skip_download': os.environ.get('YTDL_SKIPDL', False),
             'quiet': True,
@@ -181,9 +201,9 @@ class YTWorker(Process):
             'merge_output_format': 'mp4',
             'download_archive': 'downloads/history.txt',
         }
-        print("Starting download of " + self._url)
+        print("Starting download of " + self.url)
         with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self._url], self.state[self._url])
+            ydl.download([task.url], extra=task.info)
         self.inform({'status': 'done'})
 
 

@@ -1,6 +1,7 @@
 import os
 from multiprocessing import JoinableQueue
 from multiprocessing import Manager
+from wsgiref.simple_server import WSGIServer
 import signal
 
 from bottle import Bottle
@@ -14,9 +15,15 @@ from youtube_dl_server.youtube import DEFAULT_TEMPLATE
 ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
 
-class Server(Bottle):
+class Server(WSGIServer):
+    def service_actions(self):
+        #print(self.application.workers)
+        pass
+
+
+class App(Bottle):
     def __init__(self, *args, **kwargs):
-        super(Server, self).__init__(*args, **kwargs)
+        super(App, self).__init__(*args, **kwargs)
         self._manager = Manager()
         self.state = self._manager.dict()
         self.workers = []
@@ -34,6 +41,7 @@ class Server(Bottle):
                 queue=self.queue,
                 state=self.state,
                 template=self.template,
+                proxy=self._manager.Namespace(),
                 **kwargs
             )
             worker.start()
@@ -42,15 +50,24 @@ class Server(Bottle):
     def run(self, n_workers=5, **kwargs):
         self.spawn_n_workers(n_workers)
         self.spawn_n_workers(1, download=False)
-        super(Server, self).run(**kwargs)
+        super(App, self).run(**kwargs)
+
+    def get_busy_workers(self):
+        return [w for w in self.workers if w.proxy.busy and w.should_download and w.is_alive()]
+
+    def get_idle_workers(self):
+        return [w for w in self.workers if not w.proxy.busy and w.should_download]
+
+    def get_dead_workers(self):
+        return [w for w in self.workers if not w.is_alive()]
 
     def close(self):
         for w in self.workers:
             w.join()
-        super(Server, self).close()
+        super(App, self).close()
 
 
-app = Server()
+app = App()
 
 
 @app.route('/')
@@ -409,31 +426,38 @@ def state():
             "width": 1280
         }
     }
-    test = os.environ.get('YTDL_TEST', None)
+    test = os.environ.get('YTDL_DEMO', None)
     import datetime
     if test is not None:
         if datetime.datetime.now().second % 10 == 0:
             print("Injecting demo data")
             app.state = demo
     return {
-        "success" : True,
-        "state": dict(app.state),
+        'success' : True,
+        'state': dict(app.state),
+        'workers': {
+            'idle': len(app.get_idle_workers()),
+            'busy': len(app.get_busy_workers()),
+            'dead': len(app.get_dead_workers()),
+        },
     }
 
 
 @app.route('/q', method='POST')
 def q_put():
-    url = request.forms.get( "url" )
+    url = request.forms.get('url')
+    filter = request.forms.get('filter')
+    indexes = request.forms.get('indexes') or None
     if url:
-        app.queue.put(Task(url))
+        app.queue.put(Task(url, title_filter=filter, index_filter=indexes))
         print("Added url " + url + " to the download queue")
-        return {"success": True, "url": url }
+        return {"success": True, "url": url , 'filter': filter}
     else:
         return {"success": False, "error": "dl called without a url" }
 
 
 def run():
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True, server_class=Server)
 
 
 if __name__ == "__main__":

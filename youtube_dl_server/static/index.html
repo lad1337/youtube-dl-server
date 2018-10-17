@@ -7,11 +7,12 @@
 
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
   <link rel="stylesheet" href="static/main.css">
   <title>youtube-dl</title>
 
   <script id="entry-template" type="text/x-handlebars-template">
-    <li class="{{id}} item my-4 rounded {{class}} {{status}}" data-at="{{updated_at}}">
+    <li class="{{id}} item my-4 rounded {{status}}" data-at="{{updated_at}}">
       <div class="row">
         <div class="col-3 pr-1 img">
           <img class="rounded shadow-sm progress-bar-striped" src="{{thumbnail}}">
@@ -19,7 +20,7 @@
         <div class="col-9 pl-1">
           <h5 class="mt-0 text-truncate">{{title}}</h5>
           <div class="progress align-bottom">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress-bar progress-bar-striped progress-bar-animated {{class}}" role="progressbar" style="width: 100%" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
           <div class="clearfix">
             <small class="align-bottom float-right">{{_total_bytes_str}}</small>
@@ -32,16 +33,25 @@
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-dark">
-  <a class="navbar-brand text-light" href="#">Youtube-dl</a>
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-  <div class="collapse navbar-collapse" id="navbarSupportedContent">
-    <form class="form-inline">
+  <div class="container">
+    <a class="navbar-brand text-light" href="#">Youtube-dl</a>
+    <form class="form-inline navbar-form mx-auto">
       <input class="form-control mr-sm-2" name="url" type="url" placeholder="URL" aria-label="URL">
-      <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Add</button>
+      <div class="add-options">
+        <div class="form-group">
+          <label for="titlefilter">Title Filter</label>
+          <input name="filter" type="text" class="form-control" id="titlefilter" placeholder="anything in the title">
+          <label for="indexfilter">Index Filter</label>
+          <input name="indexes" type="text" class="form-control" id="indexfilter" placeholder="2,3,6">
+        </div>
+      </div>
+      <div class="btn-group" role="group">
+        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Add</button>
+        <button type="button" class="btn btn-outline-success" data-toggle="popover" data-placement="bottom" title="Options" >
+        <span class="oi oi-cog"></span>
+        </button>
+      </div>
     </form>
-
   </div>
 </nav>
 <div class="container">
@@ -51,7 +61,10 @@
       <ul class="list-unstyled pending"></ul>
     </div>
     <div class="col-4 bg-light">
-      <h2 class="text-secondary text-center">Downloading</h2>
+      <h2 class="text-secondary text-center">
+        Downloading
+        (<small id="busy"></small>/<small id="idle"></small>)
+      </h2>
       <ul class="list-unstyled downloading"></ul>
     </div>
     <div class="col-4 bg-light">

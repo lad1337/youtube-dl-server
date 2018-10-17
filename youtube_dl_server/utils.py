@@ -1,16 +1,20 @@
-import threading
+from contextlib import contextmanager
 
-# from https://stackoverflow.com/a/325528
-class StoppableThread(threading.Thread):
-    """Thread class with a stop() method. The thread itself has to check
-    regularly for the stopped() condition."""
 
-    def __init__(self, *args, **kwargs):
-        super(StoppableThread, self).__init__(*args, **kwargs)
-        self._stop_event = threading.Event()
+@contextmanager
+def attribute(obj, name, value):
+    original = getattr(obj, name)
+    try:
+        setattr(obj, name, value)
+        yield
+    finally:
+        setattr(obj, name, original)
 
-    def stop(self):
-        self._stop_event.set()
 
-    def stopped(self):
-        return self._stop_event.is_set()
+def maybe_remove(d, *keys):
+    for key in keys:
+        try:
+            del d[key]
+        except KeyError:
+            pass
+

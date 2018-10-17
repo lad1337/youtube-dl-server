@@ -2,6 +2,10 @@
     width: 600px !important;
 }
 
+.navbar .add-options {
+    display: none;
+}
+
 ul.done .progress,
 ul.pending .progress {
     display: none;

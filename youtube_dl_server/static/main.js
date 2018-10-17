@@ -14,10 +14,11 @@ String.prototype.hashCode = function() {
 
 var template;
 var status_class_map = {
-    'downloading': 'bg-transparent',
-    'analysing': 'bg-transparent',
-    'finished': 'bg-transparent',
-    'pending': ''
+    'downloading': '',
+    'analysing': '',
+    'finished': '',
+    'pending': '',
+    'error': 'bg-danger',
 };
 function new_entry(id, item){
     item.class = status_class_map[item.status];
@@ -34,8 +35,11 @@ function sort(){
 }
 
 function poll_state(){
-    $.getJSON('state', function(state){
-        var state = state.state;
+    $.getJSON('state', function(resp){
+        $('#idle').text(resp.workers.idle);
+        $('#busy').text(resp.workers.busy);
+
+        var state = resp.state;
         $('li.item').addClass('old');
         for(url in state){
             if (!state.hasOwnProperty(url))
@@ -60,7 +64,7 @@ function poll_state(){
                     .width('100%');
                 }
                 $('.speed', entry).text(item._speed_str);
-            } else if(item.status == 'done') {
+            } else if(item.status == 'done' || item.status == 'error') {
                 $('ul.downloading li.' + id).remove();
                 $('ul.pending li.' + id).remove();
                 var entry = $('ul.done .' + id);
@@ -93,13 +97,25 @@ $(document).ready(function() {
     var source   = document.getElementById("entry-template").innerHTML;
     template = Handlebars.compile(source);
     $('.navbar form').submit(function(e){
-        $.post('q', $(this).serialize());
+        $('.popover .add-options input').each(function(){
+            var t = $(this);
+            console.log(t.val());
+            $('.navbar form #' + t.attr('id')).val(t.val());
+        });
+        $.post('q', $(this).serialize(), function(resp){
+            console.log(resp);
+        });
         e.preventDefault();
+        $('[data-toggle="popover"][aria-describedby]').click();
     });
     $('#clear-history').click(function(){
         $.ajax({
             url: 'state/done',
             type: 'DELETE',
         });
+    });
+    $('[data-toggle="popover"]').popover({
+        content: $('.add-options').clone(),
+        html: true
     });
 });
