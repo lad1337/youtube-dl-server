@@ -17,8 +17,7 @@ ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
 class Server(WSGIServer):
     def service_actions(self):
-        #print(self.application.workers)
-        pass
+        self.application.ensure_workers()
 
 
 class App(Bottle):
@@ -30,26 +29,44 @@ class App(Bottle):
         self.queue = JoinableQueue()
         self._root = os.environ.get('YTDL_ROOT', 'downloads')
         self._template = os.environ.get('YTDL_TEMPLATE', DEFAULT_TEMPLATE)
+        self.n_workers = 1
+        self.info_getter = None
 
     @property
     def template(self):
         return os.path.join(self._root, self._template)
 
-    def spawn_n_workers(self, n, **kwargs):
-        for _ in range(n):
-            worker = YTWorker(
-                queue=self.queue,
-                state=self.state,
-                template=self.template,
-                proxy=self._manager.Namespace(),
-                **kwargs
-            )
-            worker.start()
-            self.workers.append(worker)
+    def spawn_worker(self,  **kwargs):
+        w = YTWorker(
+            queue=self.queue,
+            state=self.state,
+            template=self.template,
+            proxy=self._manager.Namespace(),
+            **kwargs
+        )
+        w.start()
+        return w
+
+    def ensure_workers(self):
+        for i in range(len(self.workers)):
+            try:
+                w = self.workers[i]
+            except IndexError:
+                continue
+            if w.is_alive():
+                continue
+            else:
+                print(f"removing dead worker {w}")
+                del self.workers[i]
+        for _ in range(self.n_workers - len(self.get_alive_workers())):
+            self.workers.append(self.spawn_worker())
+        if self.info_getter is None or not self.info_getter.is_alive():
+            self.info_getter = self.spawn_worker(download=False)
+
 
     def run(self, n_workers=5, **kwargs):
-        self.spawn_n_workers(n_workers)
-        self.spawn_n_workers(1, download=False)
+        self.n_workers = n_workers
+        self.ensure_workers()
         super(App, self).run(**kwargs)
 
     def get_busy_workers(self):
@@ -60,6 +77,11 @@ class App(Bottle):
 
     def get_dead_workers(self):
         return [w for w in self.workers if not w.is_alive()]
+
+    def get_alive_workers(self):
+        return [w for w in self.workers if w.is_alive()]
+
+
 
     def close(self):
         for w in self.workers:
