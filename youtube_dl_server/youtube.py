@@ -63,8 +63,15 @@ class Task:
         self.title_filter = title_filter
         self.index_filter = index_filter
         if index_filter is not None:
-            self.index_filter = map(int, index_filter.split(','))
+            filter_ = set()
+            for i in index_filter.split(','):
+                if '-' in i:
+                    begin, _, end = i.partition('-')
+                    filter_.update(range(int(begin), int(end) + 1))
+                else:
+                    filter_.add(int(i))
 
+            self.index_filter = filter_
 
     @property
     def is_playlist(self):
@@ -185,7 +192,6 @@ class YTWorker(Process):
         else:
             r = [r]
         return r
-
 
     def download(self, task):
         ydl_opts = {
